@@ -1,4 +1,4 @@
-# ParticlePhysics
+# BoundingVolume
 
 
 ## How to Execute
@@ -60,15 +60,12 @@ To successfully execute this project, please follow the steps below:
 
 ## Manual
 
-- **Press R**: Randomly generates segments.
-- **Press E**: Clear all segments and particles.
-- **Press N**: Create new particles at the origin (0,0).
+- **Press R**: Randomly generates points in the cloud.
+- **Press E**: Clear everything.
+- **Press A**: Calculate AABB.
 
-- **Mouse Click Left**: Create segments.
-- **Mouse Click Right**: Create particles.
+- **Mouse Click Left**: Create points in the cloud.
 
 ## Exhibition
 
-Below is a demonstration video showcasing the project's functionality:
-
-https://github.com/user-attachments/assets/ebe849e8-81d7-4e7a-b0e4-35c05f9ba0ed
+SOON // TODO

@@ -7,10 +7,10 @@ source:
 	g++ -c glad/src/glad.c -o Bin/glad.o
 
 all: main source
-	cd Bin && g++ main.o vectors.o point.o glad.o -lglfw -o ParticlePhysics.diego
+	cd Bin && g++ main.o vectors.o point.o glad.o -lglfw -o BoundingVolue.diego
 
 compile: all
 	cd Bin && rm main.o vectors.o point.o glad.o
 
 run:
-	cd Bin && ./ParticlePhysics.diego
+	cd Bin && ./BoundingVolue.diego
