@@ -34,6 +34,7 @@ std::vector<std::vector<ponto2D>> cloud;
 std::vector<std::vector<ponto2D>> aabb;
 std::vector<ponto2D> mouseInput;
 std::vector<rgb> colors;
+std::vector<std::pair<ponto2D, double>> circles;
 
 // Gera um RGB aleatório
 rgb randomRGB(){
@@ -116,6 +117,78 @@ bool checkBelongsToAABB(const ponto2D& p){
     return false;
 }
 
+ponto2D calculateCentroid(const std::vector<ponto2D>& sub){
+    double sum_x = 0.0;
+    double sum_y = 0.0;
+    for(const auto& p: sub){
+        sum_x += p.x;
+        sum_y += p.y;
+    }
+
+    return ponto2D{(sum_x/sub.size()), (sum_y/sub.size())};
+}
+
+void calculateCircle(){
+    circles.clear();
+    for(const auto& sub : cloud){
+        ponto2D centroid = calculateCentroid(sub);
+
+        double raio = -std::numeric_limits<double>::infinity();
+        for(const auto& p : sub){
+            double distancia = centroid.distance(p);
+            if(distancia >= raio){
+                raio = distancia;
+            }
+        }
+        circles.emplace_back(std::make_pair(centroid, raio));
+    }
+}
+
+// Função para gerar os vértices de um círculo --> Circulo é um Poligono com Infinitos Lados
+std::vector<float> generateCircleVertices(const ponto2D& center, double raio, int numSegments) {
+    std::vector<float> vertices;
+    for (int i = 0; i <= numSegments; ++i) {
+        float angle = 2.0f * M_PI * float(i) / float(numSegments);
+        float x = center.x + raio * cos(angle);
+        float y = center.y + raio * sin(angle);
+        vertices.push_back(x);
+        vertices.push_back(y);
+        vertices.push_back(0.0f);
+    }
+    return vertices;
+}
+
+void drawCircle(const ponto2D& center, const double& raio, unsigned int shaderProgram, glm::mat4 projection, float red, float green, float blue){
+    
+    int numSegments = 100;
+    std::vector<float> vertices = generateCircleVertices(center, raio, numSegments);
+
+    unsigned int VAO, VBO;
+    glGenVertexArrays(1, &VAO);
+    glGenBuffers(1, &VBO);
+
+    glBindVertexArray(VAO);
+
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), vertices.data(), GL_STATIC_DRAW);
+
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+
+    glUseProgram(shaderProgram);
+
+    glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
+    glUniform3f(glGetUniformLocation(shaderProgram, "color"), red, green, blue);
+
+    glBindVertexArray(VAO);
+    glDrawArrays(GL_LINE_LOOP, 0, numSegments + 1);
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+    glDeleteVertexArrays(1, &VAO);
+    glDeleteBuffers(1, &VBO);
+}
+
 void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
     if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
         double xpos, ypos;
@@ -135,9 +208,13 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
         cloud.clear();
         aabb.clear();
         mouseInput.clear();
+        circles.clear();
     }
     if (key == GLFW_KEY_A && action == GLFW_PRESS) {
         calculateAABB();
+    }
+    if (key == GLFW_KEY_C && action == GLFW_PRESS) {
+        calculateCircle();
     }
 }
 
@@ -543,6 +620,18 @@ int main(){
                 }else{
                     drawPoint(mouseInput[i], shaderProgram, projection, 1.0f, 0.0f, 0.0f);
                 }
+            }
+        }
+
+        if(!circles.empty()){
+            for(int i = 0; i < circles.size(); ++i){
+                auto circle = circles[i];
+
+                float r = colors[i].red;
+                float g = colors[i].green;
+                float b = colors[i].blue;
+
+                drawCircle(circle.first, circle.second, shaderProgram, projection, r, g, b);
             }
         }
 
