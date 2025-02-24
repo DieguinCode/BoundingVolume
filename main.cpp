@@ -25,6 +25,7 @@ float yMax = 100.0f;
 //Variáveis Globais
 std::vector<ponto2D> cloud;
 std::vector<ponto2D> aabb;
+std::vector<ponto2D> mouseInput;
 
 // Gera 10 pontos aleatórios na nuvem
 void randomPoints(){
@@ -65,6 +66,27 @@ void calculateAABB(){
     aabb.emplace_back(max_x, max_y); // Superior Direito
 }
 
+std::vector<bool> checkBelongsToAABB(){
+    std::vector<bool> res;
+
+    double min_x = aabb[0].x;
+    double min_y = aabb[0].y;
+
+    double max_x = aabb[3].x;
+    double max_y = aabb[3].y;
+
+    for(const auto& p : mouseInput){
+        if(p.x <= max_x && p.x >= min_x && p.y <= max_y && p.y >= min_y){
+            res.push_back(true);
+        }
+        else{
+            res.push_back(false);
+        }
+    }
+
+    return res;
+}
+
 void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
     if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
         double xpos, ypos;
@@ -72,7 +94,7 @@ void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
         // Mouse --> Coordenadas de Mundo.
         double x = static_cast<double>((xpos / WIDTH) * (xMax - xMin) + xMin);
         double y = static_cast<double>(((HEIGHT - ypos) / HEIGHT) * (yMax - yMin) + yMin);
-        cloud.emplace_back(ponto2D{x, y});
+        mouseInput.emplace_back(ponto2D{x, y});
     }
 }
 
@@ -83,6 +105,7 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
     if (key == GLFW_KEY_E && action == GLFW_PRESS) {
         cloud.clear();
         aabb.clear();
+        mouseInput.clear();
     }
     if (key == GLFW_KEY_A && action == GLFW_PRESS) {
         calculateAABB();
@@ -189,6 +212,7 @@ void drawSegment(const ponto2D& p1, const ponto2D& p2, unsigned int shaderProgra
 }
 
 void drawRectangle(unsigned int shaderProgram, glm::mat4 projection){
+    // Permite apenas exatamente 1 Bounding Box
     if(aabb.size() != 4){
         std::cout << "Problema no DrawRectangle" << std::endl;
         return;
@@ -289,6 +313,17 @@ int main(){
 
         if(!aabb.empty()){
             drawRectangle(shaderProgram, projection);
+        }
+
+        if(!mouseInput.empty()){
+            std::vector<bool> b = checkBelongsToAABB();
+            for(int i = 0; i < mouseInput.size(); ++i){
+                if(b[i]){
+                    drawPoint(mouseInput[i], shaderProgram, projection, 0.0f, 1.0f, 0.0f);
+                }else{
+                    drawPoint(mouseInput[i], shaderProgram, projection, 1.0f, 0.0f, 0.0f);
+                }
+            }
         }
 
         glfwSwapBuffers(window);
