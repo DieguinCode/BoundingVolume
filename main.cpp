@@ -23,68 +23,73 @@ float yMin = -100.0f;
 float yMax = 100.0f;
 
 //Variáveis Globais
-std::vector<ponto2D> cloud;
-std::vector<ponto2D> aabb;
+std::vector<std::vector<ponto2D>> cloud;
+std::vector<std::vector<ponto2D>> aabb;
 std::vector<ponto2D> mouseInput;
 
-// Gera 10 pontos aleatórios na nuvem
+// Gera 5 pontos aleatórios na nuvem
 void randomPoints(){
+    
+    std::vector<ponto2D> tmp;
     
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_real_distribution<> distrib_x(xMin, xMax);
     std::uniform_real_distribution<> distrib_y(yMin, yMax);
     
-    for(int i = 0; i < 10; ++i){
+    for(int i = 0; i < 5; ++i){
         double x = distrib_x(gen);
         double y = distrib_y(gen);
-        cloud.emplace_back(ponto2D(x, y));    
+        tmp.emplace_back(ponto2D(x, y));    
     }
 
+    cloud.push_back(tmp);
 }
 
 void calculateAABB(){
+    for(const auto& sub : cloud){
+        std::vector<ponto2D> tmp;
     
-    double min_x = std::numeric_limits<double>::infinity();
-    double min_y = std::numeric_limits<double>::infinity();
+        double min_x = std::numeric_limits<double>::infinity();
+        double min_y = std::numeric_limits<double>::infinity();
 
-    double max_x = -std::numeric_limits<double>::infinity();
-    double max_y = -std::numeric_limits<double>::infinity();
+        double max_x = -std::numeric_limits<double>::infinity();
+        double max_y = -std::numeric_limits<double>::infinity();
 
-    for(const auto& p : cloud){
-        min_x = std::min(min_x, p.x);
-        min_y = std::min(min_y, p.y);
+        for(const auto& p : sub){
+            min_x = std::min(min_x, p.x);
+            min_y = std::min(min_y, p.y);
+    
+            max_x = std::max(max_x, p.x);
+            max_y = std::max(max_y, p.y);
+        }
 
-        max_x = std::max(max_x, p.x);
-        max_y = std::max(max_y, p.y);
+        tmp.emplace_back(min_x, min_y); // Inferior Esquerdo
+        tmp.emplace_back(max_x, min_y); // Inferior Direito
+
+        tmp.emplace_back(min_x, max_y); // Superior Esquerdo
+        tmp.emplace_back(max_x, max_y); // Superior Direito
+
+        aabb.push_back(tmp);
     }
-
-    aabb.emplace_back(min_x, min_y); // Inferior Esquerdo
-    aabb.emplace_back(max_x, min_y); // Inferior Direito
-
-    aabb.emplace_back(min_x, max_y); // Superior Esquerdo
-    aabb.emplace_back(max_x, max_y); // Superior Direito
 }
 
-std::vector<bool> checkBelongsToAABB(){
-    std::vector<bool> res;
+bool checkBelongsToAABB(const ponto2D& p){
 
-    double min_x = aabb[0].x;
-    double min_y = aabb[0].y;
+    for(const auto& sub : aabb){
+        
+        double min_x = sub[0].x;
+        double min_y = sub[0].y;
 
-    double max_x = aabb[3].x;
-    double max_y = aabb[3].y;
+        double max_x = sub[3].x;
+        double max_y = sub[3].y;
 
-    for(const auto& p : mouseInput){
         if(p.x <= max_x && p.x >= min_x && p.y <= max_y && p.y >= min_y){
-            res.push_back(true);
-        }
-        else{
-            res.push_back(false);
+            return true;
         }
     }
 
-    return res;
+    return false;
 }
 
 void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
@@ -212,20 +217,26 @@ void drawSegment(const ponto2D& p1, const ponto2D& p2, unsigned int shaderProgra
 }
 
 void drawRectangle(unsigned int shaderProgram, glm::mat4 projection){
-    // Permite apenas exatamente 1 Bounding Box
-    if(aabb.size() != 4){
-        std::cout << "Problema no DrawRectangle" << std::endl;
+    
+    if((aabb.empty()) || (aabb[0].size() < 4)){
+        std::cout << "Impossivel desenhar 1 Retangulo : Menos que 4 pontos" << std::endl;
         return;
     }
 
-    // Aresta Esquerda
-    drawSegment(aabb[0], aabb[2], shaderProgram, projection, 0.0f, 0.0f, 1.0f);
-    // Aresta Direita
-    drawSegment(aabb[1], aabb[3], shaderProgram, projection, 0.0f, 0.0f, 1.0f);
-    // Aresta Superior
-    drawSegment(aabb[2], aabb[3], shaderProgram, projection, 0.0f, 0.0f, 1.0f);
-    // Aresta Inferior
-    drawSegment(aabb[0], aabb[1], shaderProgram, projection, 0.0f, 0.0f, 1.0f);
+    for(const auto& sub : aabb){
+        if(sub.size() != 4){
+            std::cout << "Sub com menos de 4 Pontos" << std::endl;    
+            continue;
+        }
+        // Aresta Esquerda
+        drawSegment(sub[0], sub[2], shaderProgram, projection, 0.0f, 0.0f, 1.0f);
+        // Aresta Direita
+        drawSegment(sub[1], sub[3], shaderProgram, projection, 0.0f, 0.0f, 1.0f);
+        // Aresta Superior
+        drawSegment(sub[2], sub[3], shaderProgram, projection, 0.0f, 0.0f, 1.0f);
+        // Aresta Inferior
+        drawSegment(sub[0], sub[1], shaderProgram, projection, 0.0f, 0.0f, 1.0f);
+    }
 }
 
 int main(){
@@ -306,8 +317,10 @@ int main(){
         glDrawArrays(GL_LINES, 0, 4);
 
         if(!cloud.empty()){
-            for(const auto &p : cloud){
-                drawPoint(p, shaderProgram, projection, 1.0f, 0.0f, 0.0f);
+            for(const auto& sub : cloud){
+                for(const auto &p : sub){
+                    drawPoint(p, shaderProgram, projection, 1.0f, 0.0f, 0.0f);
+                }
             }
         }
 
@@ -316,9 +329,9 @@ int main(){
         }
 
         if(!mouseInput.empty()){
-            std::vector<bool> b = checkBelongsToAABB();
             for(int i = 0; i < mouseInput.size(); ++i){
-                if(b[i]){
+                bool b = checkBelongsToAABB(mouseInput[i]);
+                if(b){
                     drawPoint(mouseInput[i], shaderProgram, projection, 0.0f, 1.0f, 0.0f);
                 }else{
                     drawPoint(mouseInput[i], shaderProgram, projection, 1.0f, 0.0f, 0.0f);
