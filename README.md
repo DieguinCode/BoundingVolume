@@ -64,7 +64,10 @@ To successfully execute this project, please follow the steps below:
 - **Press E**: Clear everything.
 - **Press A**: Calculate AABB.
 
-- **Mouse Click Left**: Create points in the cloud.
+- **Mouse Click Left**: Create points and check if these points belong or not to the Bouding Volume.
+
+## Explanations
+- **White Points**: Detect collision between Bounding Volumes
 
 ## Exhibition
 
