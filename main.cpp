@@ -272,6 +272,165 @@ void drawRectangle(unsigned int shaderProgram, glm::mat4 projection){
     }
 }
 
+ponto2D FindTheIntersectPoint(const ponto2D&a, const ponto2D&b, const ponto2D&c, const ponto2D&d){
+    
+    double det = (b.x - a.x) * (d.y - c.y) - (b.y - a.y) * (d.x - c.x);
+
+    double t = ((c.x - a.x) * (d.y - c.y) - (c.y - a.y) * (d.x - c.x)) / det;
+    double u = ((c.x - a.x) * (b.y - a.y) - (c.y - a.y) * (b.x - a.x)) / det;
+
+    if (t >= 0 && t <= 1 && u >= 0 && u <= 1) {
+        ponto2D intersectionPoint = { a.x + t * (b.x - a.x), a.y + t * (b.y - a.y) };
+        // std::cout << "Ponto de interseção: (" << intersectionPoint.x << ", " << intersectionPoint.y << ")\n";
+        return intersectionPoint; 
+    }
+
+    std::cout << "Problema no Ponto de interseção" << std::endl;
+    return ponto2D{0.0, 0.0};
+}
+
+bool checkIntersectSegments(const ponto2D&a, const ponto2D&b, const ponto2D&c, const ponto2D&d){
+
+    // A função crossProduct(p1, p2, p3) calcula o determinante 
+    // que indica a posição relativa de p3 em relação ao segmento p1p2.
+    auto crossProduct = [](const ponto2D& p1, const ponto2D& p2, const ponto2D& p3) {
+        return (p2.x - p1.x) * (p3.y - p1.y) - (p2.y - p1.y) * (p3.x - p1.x);
+    };
+
+    double d1 = crossProduct(a, b, c);
+    double d2 = crossProduct(a, b, d);
+    double d3 = crossProduct(c, d, a);
+    double d4 = crossProduct(c, d, b);
+
+    // Se os produtos cruzados tiverem sinais opostos, os segmentos se cruzam
+    if ((d1 * d2 < 0) && (d3 * d4 < 0)) {
+        return true;
+    }
+
+    return false;
+}
+
+std::vector<ponto2D> checkIntersectBetweenAABBs(){
+    
+    std::vector<ponto2D> res;
+    
+    int i = 0;
+    int j = 0;
+    for(const auto& sub : aabb){
+        // Para cada Sub --> 4 Arestas
+        // Para cada aresta eu preciso comparar com as outras 4 arestas de cada outra sub de aabb
+
+        ponto2D inferior_esquerdo = sub[0];
+        ponto2D inferior_direito = sub[1];
+
+        ponto2D superior_esquerdo = sub[2];
+        ponto2D superior_direito = sub[3];
+
+        /*
+            // Aresta Esquerda
+            sub[0], sub[2]
+            
+            // Aresta Direita
+            sub[1], sub[3]
+            
+            // Aresta Superior
+            sub[2], sub[3]
+
+            // Aresta Inferior
+            sub[0], sub[1]
+        */
+
+        for(const auto& element : aabb){
+            if(i == j){
+                // Não podemos comparar dois subs iguais
+                // std::cout << "Debug " << i << " | " << j << std::endl;
+                continue;
+            }
+
+            // Aresta Esquerda - Aresta Esquerda
+            if(checkIntersectSegments(sub[0], sub[2], element[0], element[2])){
+                res.push_back(FindTheIntersectPoint(sub[0], sub[2], element[0], element[2]));
+            }
+            // Aresta Esquerda - Aresta Superior
+            if(checkIntersectSegments(sub[0], sub[2], element[2], element[3])){
+                res.push_back(FindTheIntersectPoint(sub[0], sub[2], element[2], element[3]));
+            }
+            // Aresta Esquerda - Aresta Direita
+            if(checkIntersectSegments(sub[0], sub[2], element[1], element[3])){
+                res.push_back(FindTheIntersectPoint(sub[0], sub[2], element[1], element[3]));
+            }
+            // Aresta Esquerda - Aresta Inferior
+            if(checkIntersectSegments(sub[0], sub[2], element[0], element[1])){
+                res.push_back(FindTheIntersectPoint(sub[0], sub[2], element[0], element[1]));
+            }
+
+            //------------------------
+
+            // Aresta Superior - Aresta Esquerda
+            if(checkIntersectSegments(sub[2], sub[3], element[0], element[2])){
+                res.push_back(FindTheIntersectPoint(sub[2], sub[3], element[0], element[2]));
+            }
+            // Aresta Superior - Aresta Superior
+            if(checkIntersectSegments(sub[2], sub[3], element[2], element[3])){
+                res.push_back(FindTheIntersectPoint(sub[2], sub[3], element[2], element[3]));
+            }
+            // Aresta Superior - Aresta Direita
+            if(checkIntersectSegments(sub[2], sub[3], element[1], element[3])){
+                res.push_back(FindTheIntersectPoint(sub[2], sub[3], element[1], element[3]));
+            }
+            // Aresta Superior - Aresta Inferior
+            if(checkIntersectSegments(sub[2], sub[3], element[0], element[1])){
+                res.push_back(FindTheIntersectPoint(sub[2], sub[3], element[0], element[1]));
+            }
+
+            //-----------------------
+
+            // Aresta Direita - Aresta Esquerda
+            if(checkIntersectSegments(sub[1], sub[3], element[0], element[2])){
+                res.push_back(FindTheIntersectPoint(sub[1], sub[3], element[0], element[2]));
+            }
+            // Aresta Direita - Aresta Superior
+            if(checkIntersectSegments(sub[1], sub[3], element[2], element[3])){
+                res.push_back(FindTheIntersectPoint(sub[1], sub[3], element[2], element[3]));
+            }
+            // Aresta Direita - Aresta Direita
+            if(checkIntersectSegments(sub[1], sub[3], element[1], element[3])){
+                res.push_back(FindTheIntersectPoint(sub[1], sub[3], element[1], element[3]));
+            }
+            // Aresta Direita - Aresta Inferior
+            if(checkIntersectSegments(sub[1], sub[3], element[0], element[1])){
+                res.push_back(FindTheIntersectPoint(sub[1], sub[3], element[0], element[1]));
+            }
+
+            //----------------------
+
+            // Aresta Inferior - Aresta Esquerda
+            if(checkIntersectSegments(sub[0], sub[1], element[0], element[2])){
+                res.push_back(FindTheIntersectPoint(sub[0], sub[1], element[0], element[2]));
+            }
+            // Aresta Inferior - Aresta Superior
+            if(checkIntersectSegments(sub[0], sub[1], element[2], element[3])){
+                res.push_back(FindTheIntersectPoint(sub[0], sub[1], element[2], element[3]));
+            }
+            // Aresta Inferior - Aresta Direita
+            if(checkIntersectSegments(sub[0], sub[1], element[1], element[3])){
+                res.push_back(FindTheIntersectPoint(sub[0], sub[1], element[1], element[3]));
+            }
+            // Aresta Inferior - Aresta Inferior
+            if(checkIntersectSegments(sub[0], sub[1], element[0], element[1])){
+                res.push_back(FindTheIntersectPoint(sub[0], sub[1], element[0], element[1]));
+            }
+
+            j++;
+        }
+
+        i++;
+        j = 0;
+    }
+
+    return res;
+}
+
 int main(){
     if (!glfwInit()) {
         std::cerr << "Erro ao inicializar GLFW" << std::endl;
@@ -367,6 +526,13 @@ int main(){
 
         if(!aabb.empty()){
             drawRectangle(shaderProgram, projection);
+            if(aabb.size() >= 2){ // Temos que ter pelo menos 2 AABB's
+                std::vector<ponto2D> intersects = checkIntersectBetweenAABBs();
+
+                for(const auto& p : intersects){
+                    drawPoint(p, shaderProgram, projection, 1.0f, 1.0f, 1.0f);
+                }
+            }
         }
 
         if(!mouseInput.empty()){
