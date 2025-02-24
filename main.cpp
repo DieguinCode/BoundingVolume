@@ -22,10 +22,32 @@ float xMax = 100.0f;
 float yMin = -100.0f;
 float yMax = 100.0f;
 
+struct rgb
+{
+    float red;
+    float green;
+    float blue;
+};
+
 //Variáveis Globais
 std::vector<std::vector<ponto2D>> cloud;
 std::vector<std::vector<ponto2D>> aabb;
 std::vector<ponto2D> mouseInput;
+std::vector<rgb> colors;
+
+// Gera um RGB aleatório
+rgb randomRGB(){
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<> distrib(0.0f, 1.0f);
+
+    rgb color;
+    color.red = distrib(gen);
+    color.green = distrib(gen);
+    color.blue = distrib(gen);
+
+    return color;
+}
 
 // Gera 5 pontos aleatórios na nuvem
 void randomPoints(){
@@ -44,9 +66,11 @@ void randomPoints(){
     }
 
     cloud.push_back(tmp);
+    colors.push_back(randomRGB()); // Cor i é equivalente à cor do subconjunto i de pontos na nuvem.
 }
 
 void calculateAABB(){
+    aabb.clear();
     for(const auto& sub : cloud){
         std::vector<ponto2D> tmp;
     
@@ -223,19 +247,28 @@ void drawRectangle(unsigned int shaderProgram, glm::mat4 projection){
         return;
     }
 
-    for(const auto& sub : aabb){
+    for(int i = 0; i < aabb.size(); ++i){
+        
+        auto sub = aabb[i];
+
+        float r = colors[i].red;
+        float g = colors[i].green;
+        float b = colors[i].blue;
+
+        
         if(sub.size() != 4){
             std::cout << "Sub com menos de 4 Pontos" << std::endl;    
             continue;
         }
+
         // Aresta Esquerda
-        drawSegment(sub[0], sub[2], shaderProgram, projection, 0.0f, 0.0f, 1.0f);
+        drawSegment(sub[0], sub[2], shaderProgram, projection, r, g, b);
         // Aresta Direita
-        drawSegment(sub[1], sub[3], shaderProgram, projection, 0.0f, 0.0f, 1.0f);
+        drawSegment(sub[1], sub[3], shaderProgram, projection, r, g, b);
         // Aresta Superior
-        drawSegment(sub[2], sub[3], shaderProgram, projection, 0.0f, 0.0f, 1.0f);
+        drawSegment(sub[2], sub[3], shaderProgram, projection, r, g, b);
         // Aresta Inferior
-        drawSegment(sub[0], sub[1], shaderProgram, projection, 0.0f, 0.0f, 1.0f);
+        drawSegment(sub[0], sub[1], shaderProgram, projection, r, g, b);
     }
 }
 
@@ -317,10 +350,18 @@ int main(){
         glDrawArrays(GL_LINES, 0, 4);
 
         if(!cloud.empty()){
-            for(const auto& sub : cloud){
+            for(int i = 0; i < cloud.size(); ++i){
+                auto sub = cloud[i];
+
+                rgb color = colors[i];
+                float r = color.red;
+                float g = color.green;
+                float b = color.blue;
+
                 for(const auto &p : sub){
-                    drawPoint(p, shaderProgram, projection, 1.0f, 0.0f, 0.0f);
+                    drawPoint(p, shaderProgram, projection, r, g, b);
                 }
+
             }
         }
 
