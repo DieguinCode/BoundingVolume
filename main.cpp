@@ -189,6 +189,18 @@ void drawCircle(const ponto2D& center, const double& raio, unsigned int shaderPr
     glDeleteBuffers(1, &VBO);
 }
 
+bool checkBelongsToCircle(const ponto2D& p){
+    for(const auto& circle : circles){
+        ponto2D center = circle.first;
+        double raio = circle.second;
+
+        if(std::pow(p.x - center.x, 2) + std::pow(p.y - center.y, 2) <= std::pow(raio, 2)){
+            return true;
+        }
+    }
+    return false;
+}
+
 void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
     if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
         double xpos, ypos;
@@ -614,8 +626,9 @@ int main(){
 
         if(!mouseInput.empty()){
             for(int i = 0; i < mouseInput.size(); ++i){
-                bool b = checkBelongsToAABB(mouseInput[i]);
-                if(b){
+                bool b1 = checkBelongsToAABB(mouseInput[i]);
+                bool b2 = checkBelongsToCircle(mouseInput[i]);
+                if(b1 || b2){
                     drawPoint(mouseInput[i], shaderProgram, projection, 0.0f, 1.0f, 0.0f);
                 }else{
                     drawPoint(mouseInput[i], shaderProgram, projection, 1.0f, 0.0f, 0.0f);
