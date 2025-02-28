@@ -63,6 +63,7 @@ To successfully execute this project, please follow the steps below:
 - **Press R**: Randomly generates points in the cloud.
 - **Press E**: Clear everything.
 - **Press A**: Calculate AABB.
+- **Press C**: Calculate Circle.
 
 - **Mouse Click Left**: Create points and check if these points belong or not to the Bouding Volume.
 

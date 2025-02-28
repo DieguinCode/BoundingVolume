@@ -520,6 +520,52 @@ std::vector<ponto2D> checkIntersectBetweenAABBs(){
     return res;
 }
 
+std::vector<ponto2D> checkIntersectBetweenCircles(){
+    // Dois circulos colidem se a soma de seus raios for igual (eles se tocam) ou se a soma
+    // for menor (um circulo passa por dentro do outro) à distancia entre seus centros
+
+    std::vector<ponto2D> res;
+
+    for(int i = 0; i < circles.size(); ++i){
+        auto circle = circles[i];
+
+        for(int j = 0; j < circles.size(); ++j){
+            if(j == i) {continue;}
+            double distancia = circle.first.distance(circles[j].first);
+            if(distancia <= circle.second + circles[j].second && distancia >= std::abs(circle.second - circles[j].second)){
+                // Há Colisão
+                
+                double a = (std::pow(circle.second, 2) - std::pow(circles[j].second, 2) + std::pow(distancia, 2));
+                a /= (2 * distancia);
+
+                double h = std::sqrt(std::pow(circle.second, 2) - std::pow(a, 2));
+
+                ponto2D p0;
+                p0.x = circle.first.x + (a * (circles[j].first.x - circle.first.x)) / distancia;
+                p0.y = circle.first.y + (a * (circles[j].first.y - circle.first.y)) / distancia;
+
+                if (h == 0) {
+                    // Um ponto de interseção
+                    res.push_back(p0);
+                } else {
+                    // Dois pontos de interseção
+                    ponto2D p1, p2;
+                    p1.x = p0.x + (h * (circles[j].first.y - circle.first.y)) / distancia;
+                    p1.y = p0.y - (h * (circles[j].first.x - circle.first.x)) / distancia;
+
+                    p2.x = p0.x - (h * (circles[j].first.y - circle.first.y)) / distancia;
+                    p2.y = p0.y + (h * (circles[j].first.x - circle.first.x)) / distancia;
+
+                    res.push_back(p1);
+                    res.push_back(p2);
+                }
+            }
+        }
+    }
+
+    return res;
+}
+
 int main(){
     if (!glfwInit()) {
         std::cerr << "Erro ao inicializar GLFW" << std::endl;
@@ -645,6 +691,14 @@ int main(){
                 float b = colors[i].blue;
 
                 drawCircle(circle.first, circle.second, shaderProgram, projection, r, g, b);
+            }
+
+            if(circles.size() >= 2){ // Temos que ter pelo menos 2 Circulos
+                std::vector<ponto2D> intersects = checkIntersectBetweenCircles();
+
+                for(const auto& p : intersects){
+                    drawPoint(p, shaderProgram, projection, 1.0f, 1.0f, 1.0f);
+                }
             }
         }
 
