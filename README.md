@@ -69,8 +69,8 @@ To successfully execute this project, please follow the steps below:
 - **Mouse Click Left**: Create points and check if these points belong or not to the Bouding Volume.
 
 ## Explanations
-- **White Points**: Detect collision between Bounding Volumes
+- **White Points**: Detect collision between AABB-AABB and Circle-Circle
 
 ## Exhibition
 
-SOON // TODO
+[Assista ao video no Youtube](https://youtu.be/sxb11kh-nFg)
