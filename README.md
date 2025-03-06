@@ -64,6 +64,7 @@ To successfully execute this project, please follow the steps below:
 - **Press E**: Clear everything.
 - **Press A**: Calculate AABB.
 - **Press C**: Calculate Circle.
+- **Press O**: Calculate OBB.
 
 - **Mouse Click Left**: Create points and check if these points belong or not to the Bouding Volume.
 

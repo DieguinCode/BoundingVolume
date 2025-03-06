@@ -35,6 +35,7 @@ std::vector<std::vector<ponto2D>> aabb;
 std::vector<ponto2D> mouseInput;
 std::vector<rgb> colors;
 std::vector<std::pair<ponto2D, double>> circles;
+std::vector<std::tuple<ponto2D, ponto2D, ponto2D, ponto2D>> obb;
 
 // Gera um RGB aleatório
 rgb randomRGB(){
@@ -201,6 +202,49 @@ bool checkBelongsToCircle(const ponto2D& p){
     return false;
 }
 
+void calculateOBB(){
+    obb.clear();
+    
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<double> dist(-1.0, 1.0);
+    
+    for(const auto& sub : cloud){
+        ponto2D U(dist(gen), dist(gen));
+        double norm = std::sqrt(U.x * U.x + U.y * U.y);
+        U.x /= norm;
+        U.y /= norm;
+        
+        ponto2D V(-U.y, U.x);
+        
+        double min_u = std::numeric_limits<double>::infinity();
+        double min_v = std::numeric_limits<double>::infinity();
+        double max_u = -std::numeric_limits<double>::infinity();
+        double max_v = -std::numeric_limits<double>::infinity();
+        
+        for(const auto& p : sub){
+            double proj_u = p.x * U.x + p.y * U.y;
+            double proj_v = p.x * V.x + p.y * V.y;
+            
+            min_u = std::min(min_u, proj_u);
+            min_v = std::min(min_v, proj_v);
+            max_u = std::max(max_u, proj_u);
+            max_v = std::max(max_v, proj_v);
+        }
+        
+        double center_u = (min_u + max_u) / 2.0;
+        double center_v = (min_v + max_v) / 2.0;
+        
+        ponto2D center(center_u * U.x + center_v * V.x, 
+                       center_u * U.y + center_v * V.y);
+        
+        ponto2D half_sizes((max_u - min_u) / 2.0, (max_v - min_v) / 2.0);
+        
+        obb.emplace_back(std::make_tuple(center, half_sizes, U, V));
+    }
+}
+
+
 void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
     if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
         double xpos, ypos;
@@ -221,12 +265,16 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
         aabb.clear();
         mouseInput.clear();
         circles.clear();
+        obb.clear();
     }
     if (key == GLFW_KEY_A && action == GLFW_PRESS) {
         calculateAABB();
     }
     if (key == GLFW_KEY_C && action == GLFW_PRESS) {
         calculateCircle();
+    }
+    if (key == GLFW_KEY_O && action == GLFW_PRESS) {
+        calculateOBB();
     }
 }
 
@@ -358,6 +406,31 @@ void drawRectangle(unsigned int shaderProgram, glm::mat4 projection){
         drawSegment(sub[2], sub[3], shaderProgram, projection, r, g, b);
         // Aresta Inferior
         drawSegment(sub[0], sub[1], shaderProgram, projection, r, g, b);
+    }
+}
+
+void drawOBB(unsigned int shaderProgram, glm::mat4 projection){
+    if(obb.empty()){
+        std::cout << "Impossivel desenhar OBB: Nenhuma caixa encontrada" << std::endl;
+        return;
+    }
+
+    for(int i = 0; i < obb.size(); ++i){
+        auto [center, half_sizes, U, V] = obb[i];
+        
+        float r = colors[i].red;
+        float g = colors[i].green;
+        float b = colors[i].blue;
+
+        ponto2D corner1 = center + U * half_sizes.x + V * half_sizes.y;
+        ponto2D corner2 = center - U * half_sizes.x + V * half_sizes.y;
+        ponto2D corner3 = center - U * half_sizes.x - V * half_sizes.y;
+        ponto2D corner4 = center + U * half_sizes.x - V * half_sizes.y;
+        
+        drawSegment(corner1, corner2, shaderProgram, projection, r, g, b);
+        drawSegment(corner2, corner3, shaderProgram, projection, r, g, b);
+        drawSegment(corner3, corner4, shaderProgram, projection, r, g, b);
+        drawSegment(corner4, corner1, shaderProgram, projection, r, g, b);
     }
 }
 
@@ -668,6 +741,10 @@ int main(){
                     drawPoint(p, shaderProgram, projection, 1.0f, 1.0f, 1.0f);
                 }
             }
+        }
+
+        if(!obb.empty()){
+            drawOBB(shaderProgram, projection);
         }
 
         if(!mouseInput.empty()){
